@@ -1,0 +1,109 @@
+This text document serves to document the structure of the WSUS_Update_Data sqlite database.
+
+Tables:
+UpdateFiles - contains information about Windows Update files
+PatchedFiles - contains information about individual binaries within Windows Update files
+SymbolFiles - contains information about symbol files for the binaries being updated by Windows Update files
+
+Table Fields:
+    UpdateFiles: (name | type | special prop. | notes)
+        SHA256 | text | PRIMARY KEY, CANNOT BE NULL | represents SHA256 value of entire Update file
+        SHA1 | text | None | represents SHA1 value of entire Update file
+        Extracted | integer | None | should be 0 or 1 representing whether or not files have been extracted from this update
+        SymbolObtained | integer | None | should be 0 or 1 representing whether or not any symbols have been obtained for the binaries in this update
+        Superseding | text | None | points to the SHA256 of the update that this update supersedes
+        supercededBy | text | None | points to the SHA256 of the update that this update is superceded by
+        DiskPath | text | None | the full path of the update !! (on further thought, this should be a relative path since we want the database to be portable)
+        InsertionTime | text | None | the time that this record was inserted into this database
+
+    PatchedFiles: (name | type | special prop. | notes)
+        SHA256 | text | PRIMARY KEY, CANNOT BE NULL | represents SHA256 value of the patched binary; part of the compound primary key along with UpdateSHA
+        UpdateSHA | text | PRIMARY KEY, FOREIGN KEY, CANNOT BE NULL | relates to the SHA256 field of the UpdateFiles table
+        SHA1 | text | None | represents SHA1 value of patched binary file
+        FileName | text | None | the name of the patched file
+        OperatingSystemVersion | text | None | the version of Windows for which this patched binary is relevant
+        Architecture | text | None | the architecture of the patched binary (x86, x64, amd64, arm64, etc.)
+        Signature | text | None | the digital signature of the patched binary, or NULL if the binary is not signed
+        Age | integer | None | indicates the number of updates to the PDB information
+        PdbFilename | text | None | the name of the associated symbol file
+        SymbolObtained | integer | None | should be 0 or 1 representing whether or not the symbols were obtained for this patched binary
+        SymbolPath | text | None | the path of the associated .pdb file
+        DiskPath | text | None | The full path of the patched binary
+        FileExtension | text | None | the file extension of the patched binary (exe, sys, dll, etc)
+        Type | text | None | whether the PE is a exe, sys, or dll (this could be different from the FileExtension)
+        OriginalFilename | text | None | the original name of the PE at the time of compilation, in the event that the file was renamed at some point. Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        FileDescription | text | None | Describes the functionality of the file. Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        ProductName | text | None | The name of the overall product.  Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        Comments | text | None | Arbitrary comments on the file.  Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        CompanyName | text | None | the company that developed/signed the binary (usually Microsoft) Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        FileVersion | text | None | the version of the file.  Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        ProductVersion | text | None | the version of the product of which this binary is a part of.  Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        IsDebug | integer | None | indicates whether or not the debug section of this binary exists.  Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        IsPatched | integer | None | indicates whether or not this file has been patched. Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        IsPreReleased | integer | None | indicates whether or not this file is a prerelease version. Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        IsPrivateBuild | integer | None | indicates whether or not the build is a private version. Refer to "IsPrivateBuild" for more info. Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        IsSpecialBuild | integer | None | indicates whether this PE is a special build or not. Refer to "SpecialBuild" for more info. Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        Language | text | None | the human language that the application supports (e.g. American English, Mandarin, Spanish, etc.)
+        PrivateBuild | text | None | specifies additional, arbitrary information about the private nature of the build. Shoud only be present if "IsPrivateBuild" is 1. Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        SpecialBuild | text | None | specifies how this version of file is different from the standard build. Should only be present if "IsSpecialBuild" is 1. Typically seen within the String table, which is an arbitrary section containing strings that should describe the file in various ways.
+        BuiltwithDbgInfo | text | None | indicates whether the PE was compiled with debug symbols placed into a pdb file.
+        StrippedPE | integer | None | indicates whether or not the PE was stripped of debug information
+        Ignored | integer | None | indicates whether pdb symbols were obtained or not from symchk
+
+    SymbolFiles: (name | type | special prop. | notes)
+        PESHA256 | text | PRIMARY KEY, FOREIGN KEY, CANNOT BE NULL | represents SHA256 value of the patched binary for which this symbol file is for; part of the compound primary key along with UpdateSHA; relates to the SHA256 and UpdateSHA fields of of the PatchedFiles table along with UpdateSHA
+        UpdateSHA | text | PRIMARY KEY, FOREIGN KEY, CANNOT BE NULL | part of the compound primary key along with PESHA256; relates to the SHA256 and UpdateSHA fields of of the PatchedFiles table along with PESHA256
+        PESHA1 | text | None | represents SHA1 value of patched binary file
+        FileName | text | None | the name of the pdb file
+        Architecture | text | None | the architecture of the PE file for which this symbole file exists
+        Signature | text | None | the digital signature of this symbol file (potentially not actualy a digital signature? according to llvm.org which documents PDB file structure, it could just be a timestamp in seconds. If this is the case, then the field is typically ignored in favor of a GUID)
+        PublicSymbol | integer | None | boolean indicating whether public symbols exist in this file
+        PrivateSymbol | integer | None | boolean indicating whether private symbols exist in this file
+        SymContains | text | None | Indicates the type(s) of symbol (public and/or private) that the pdb file contains
+        Source | text | None | The file path of the PE file being checked for debug information
+        Result | integer | None | a code indicating success or some other kind of error code.
+        *** info below is obtained via Symchk output ***
+        structSize | integer | None | size of the structure in bytes
+        base | integer | None | base virtual address where image is loaded
+        imageSize | integer | None | size of image in bytes
+        symDate | integer | None | date and timestamp
+        checksum | integer | None | the checksum of the image
+        numsyms | integer | None | number of symbols in the symbol table
+        symtype | text | None | the type of symbols loaded. refer to table below for more info
+        modname | text | None | the name of the module
+        imagename | text | None | the name of the image which may or may not be a full path
+        loadedimage | text | None | the full path and file name from which symbols were loaded
+        pdb | text | None | the full path and name of the pdb file
+        CV | text | None | the file signature of the CodeView record in the debug directory
+        CVDWORD | integer | None | CV as a DWORD in little endian order
+        CVData | text | None | Contents of the CodeView record
+        PDBSig | text | None | the signature of the pdb
+        PDB70Sig | text | None | the signature of the pdb but for Visual C/C++ 7.0 and later
+        Age | integer | None | according to llvm.org, the number of times the pdb has been written to. same as 'dbiage' below
+        PDBMatched | integer | None | boolean to indicate whether the loaded pdb is matched
+        DBGMatched | integer | None | boolean to indicate whether the loaded dbg is matched
+        LineNumber | integer | None | indicates whether line number information is known (typically 0 or 1 for FALSE or TRUE)
+        Globalsyms | integer | None | indicates whether global symbols are present (typically 0 or 1 for FALSE or TRUE)
+        TypeInfo | integer | None | indicates whether data type
+        SymbolCheckVersionUsed | integer | None | The version of Symchk
+        DbgFileName | text | None | the name of the .dbg file, if it exists. Empty if it doesn't.
+        DbgTimeDatestamp | integer | None | same as symDate
+        DbgSizeOfImage | integer | None | same as imageSize
+        DbgChecksum | integer | None | same as checksum
+        FullPdbFilename | text | None | same as "pdb"
+        PdbSignature | text | None | same as PDB70Sig
+        PdbDbiAge | integer | None | consistent with Age field above. According to llvm.org Age and PdbDbiAge are the same.
+        Ignored | integer | None | indicates whether symchk ignored acquisition of this set of symbols
+        IgnoredReason | text | None | the reason that symchk gives for not acquiring symbols
+        SymbolObtained | integer | None | indicates whether symbols have in fact been obtained
+
+SymType values:
+SymCoff -> COFF symbols
+SynCv -> CodeView symbols
+SymDeferred -> Symbol loading deferred
+SymDia -> DIA symbols
+SymExport -> Symbols generated from dll export table
+SymNone -> No symbols loaded
+SymPDB -> PDB symbols
+SymSym -> .sym file
+SymVirtual -> module created by SymLoadModuleEx with SLMFLAG_VIRTUAL

@@ -12,15 +12,7 @@ import re
 
 import logging, logging.handlers
 
-from pathlib import Path
-
-import pefile
-
-from support.utils import pebinarytype, getfilehashes
-
-from support.utils import getpearch, ispedbgstripped, ispebuiltwithdebug
-
-from support.utils import getpesigwoage, getpeage, getpepdbfilename
+from support.utils import getfilehashes
 
 import globs
 
@@ -244,7 +236,7 @@ def writeupdate(file, sha256, sha1, \
          sha1,
          # Extracted, SymbolsObtained
          1, 0,
-         # Seceding, SecededBy,
+         # Superseding, SupersecededBy,
          '', '',
          # DiskPath,
          str(file),
@@ -332,7 +324,7 @@ def writesymbol(file, symchkerr, symchkout, sha256, sha1, infolist, \
         "CV DWORD:": 0,
         "CV Data:": '',
         "PDB Sig:": '',
-        "PDB7 Sig:": '',
+        "PDB70 Sig:": '',
         "Age:": 0,
         "PDB Matched:": '',
         "DBG Matched:": '',
@@ -460,8 +452,7 @@ def writesymbol(file, symchkerr, symchkout, sha256, sha1, infolist, \
          # DbgTimeDatestamp, DbgSizeOfTime
          symchkarr['DbgTimeDateStamp'],
          symchkarr["DbgSizeOfImage"],
-         # DbgChecksum, PdbDbiAgeFullPdbFilename, PdbSignature,
-         # PdbDbiAge
+         # DbgChecksum, PdbDbiAgeFullPdbFilename, PdbSignature, PdbDbiAge
          symchkarr["DbgChecksum"],
          symchkarr["PdbFilename"],
          symchkarr["PdbSignature"],

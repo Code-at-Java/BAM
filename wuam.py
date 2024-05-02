@@ -1,11 +1,12 @@
 #! python3
 
+# Description:
+# This module is meant to be run after an initial run of the main module. The main module should initialize the database but leave several important fields in the Updates table empty. This module will go in after the main module to fill out those fields as obtained from the Windows Internal Database.
+
 # ************************************************************
 # Imports
 # ************************************************************
 import sys
-
-import csv
 
 import sqlite3
 

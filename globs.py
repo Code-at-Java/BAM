@@ -5,8 +5,8 @@ this file contains global values and variables used throughout the application
 # Imports
 #***************************************
 import sqlite3
+import subprocess
 import multiprocessing as mp
-from importlib import util
 #***************************************
 # Global Constants
 #***************************************
@@ -27,7 +27,14 @@ DBCONN2.execute("pragma synchronous=NORMAL")
 # WSUS-related
 server = 'np:\\\\.\\pipe\\MICROSOFT##WID\\tsql\\query'
 database = 'SUSDB'
-connstr = 'DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+';'
+# find the version of ODBC driver for use in the connection string
+driverVersion = ""
+args = "powershell.exe Invoke-Command -ScriptBlock { $searchRegex = \'ODBC Driver \\d+ for SQL Server\'; $version = \'\'; $driverArray = Get-OdbcDriver; ForEach ($driver in $driverArray) {if (($driver.Name -match $searchRegex) -and ($driver.platform -match \'64-bit\')){ $dummy = $driver.Name -match \'\\d+\'; $version = $Matches.0 }} Write-Output $version; }"
+with subprocess.Popen(args, shell=False, stdout=subprocess.PIPE) as process:
+    rawstdout, _ = process.communicate()
+    driverVersion = rawstdout.decode("ascii").strip()
+odbcDriverName = 'ODBC Driver' + driverVersion + ' for SQL Server'
+connstr = 'DRIVER={' + odbcDriverName + '};SERVER=' + server + ';DATABASE=' + database + ';'
 
 # to view column names
 DBCONN.row_factory = sqlite3.Row
@@ -93,7 +100,7 @@ SYMBOLFILETSTMT = ("CREATE TABLE IF NOT EXISTS SymbolFiles " +
     "PESHA1 text, " +
     "PublicSymbol integer, " +
     "PrivateSymbol integer, " + 
-    "SymContains integer, " +
+    "SymContains text, " +
     "structSize integer,  " + 
     "base integer, " + 
     "imageSize integer, " +
