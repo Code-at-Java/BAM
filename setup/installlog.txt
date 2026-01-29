@@ -1,0 +1,2 @@
+ECHO is off.
+The product version of Windows SDK must be at least 10.0.17763 
